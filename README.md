@@ -40,6 +40,24 @@ make upload                     # or: make deploy
 make upload PORT=/dev/ttyACM0
 ```
 
+## USB keyboard mode
+
+The Uno R3 can be turned into a USB keyboard by reflashing its ATmega16U2 USB chip.
+See [Making the Uno a USB keyboard](./wiki/usb-keyboard.md).
+
+## Restoring the default USB-serial firmware
+
+To turn the board back into a normal Uno, put the 16U2 in DFU mode again ([how](./wiki/usb-keyboard.md#2-put-the-16u2-in-dfu-mode)) and run:
+
+```bash
+sudo make restore-usbserial
+```
+
+This flashes the stock firmware from `firmware/Arduino-usbserial-atmega16u2-Uno-Rev3.hex`,
+taken from [ArduinoCore-avr](https://github.com/arduino/ArduinoCore-avr/tree/master/firmwares/atmegaxxu2/arduino-usbserial).
+After a replug, the board shows up as `2341:0043` on `/dev/ttyACM0` again, and `make upload` works.
+The 16U2's DFU bootloader is write-protected, so this always works.
+
 ## References
 
 - https://github.com/sagarsp/arduino-blink-c

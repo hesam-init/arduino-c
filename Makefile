@@ -8,6 +8,7 @@ PORT       ?= /dev/ttyUSB0
 PROGRAMMER ?= arduino
 BAUD       ?= 115200
 BUILD_DIR  ?= build
+DFU        ?= dfu-programmer
 
 CC      = avr-gcc
 OBJCOPY = avr-objcopy
@@ -21,7 +22,7 @@ OBJ = $(BUILD_DIR)/$(FILENAME).o
 ELF = $(BUILD_DIR)/$(FILENAME).elf
 HEX = $(BUILD_DIR)/$(FILENAME).hex
 
-.PHONY: all upload deploy size clean
+.PHONY: all upload deploy size clean restore-usbserial
 
 all: $(HEX)
 
@@ -45,6 +46,13 @@ deploy: upload
 
 size: $(ELF)
 	$(SIZE) --format=avr --mcu=$(DEVICE) $<
+
+# Put the stock Arduino USB-serial firmware back so `make upload` works again
+# (the Uno's ATmega16U2 must be in DFU mode)
+restore-usbserial:
+	$(DFU) atmega16u2 erase --force
+	$(DFU) atmega16u2 flash firmware/Arduino-usbserial-atmega16u2-Uno-Rev3.hex
+	$(DFU) atmega16u2 launch
 
 clean:
 	rm -rf $(BUILD_DIR)
