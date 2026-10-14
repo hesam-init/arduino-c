@@ -11,11 +11,10 @@ the AVR C compiler and Avrdude.
 
 ## Installation
 
-Under Linux install the toolchain:
+Install the AVR toolchain for your Linux distribution:
 
-```bash
-sudo apt-get update && sudo apt-get install gcc-avr binutils-avr gdb-avr avr-libc avrdude make
-```
+- [Debian-based (Debian, Ubuntu, Mint, ...)](./wiki/install-debian.md)
+- [Arch-based (Arch, Manjaro, EndeavourOS, ...)](./wiki/install-arch.md)
 
 ## Compiling
 
