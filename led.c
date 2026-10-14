@@ -3,7 +3,7 @@
 #ifndef F_CPU
 #define F_CPU 16000000UL
 #endif
-#define BLINK_DELAY_MS 5000
+#define BLINK_DELAY_MS 2000
 
 #include <util/delay.h>
 
