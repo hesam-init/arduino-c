@@ -18,22 +18,26 @@ Install the AVR toolchain for your Linux distribution:
 
 ## Compiling
 
-To compile the led program, run make
+To compile the led program, run make. All build output (`.o`, `.elf`, `.hex`)
+goes into the `build/` directory:
 
 ```bash
-make
+make        # build build/led.hex and print the size report
+make size   # print the size report again
+make clean  # remove the build/ directory
 ```
 
 ## Deploying to Arduino Uno
 
 In order to upload the binary to your Arduino Uno, check on which port
 your Arduino is connected. You can see the path for example in the Arduino IDE.
-Replace the port with the default value in the Makefile (ARDUINO_USB).
+Either change the default value in the Makefile (`PORT`) or pass it on the command line.
 
 Then you can upload the program via:
 
 ```bash
-make deploy
+make upload                     # or: make deploy
+make upload PORT=/dev/ttyACM0
 ```
 
 ## References

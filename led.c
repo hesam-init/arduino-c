@@ -1,6 +1,8 @@
 #include <avr/io.h>
 
-#define F_CPU 16000000
+#ifndef F_CPU
+#define F_CPU 16000000UL
+#endif
 #define BLINK_DELAY_MS 5000
 
 #include <util/delay.h>

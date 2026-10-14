@@ -32,10 +32,14 @@ ls /dev/ttyUSB* /dev/ttyACM*
 ```
 
 An official Arduino Uno usually shows up as `/dev/ttyACM0`, clones as `/dev/ttyUSB0`.
-If it differs from the Makefile default (`/dev/ttyUSB0`), pass it when deploying:
+If it differs from the Makefile default (`/dev/ttyUSB0`), pass it when uploading:
 
 ```bash
-make deploy ARDUINO_USB=/dev/ttyACM0
+make upload PORT=/dev/ttyACM0
+```
+
+```bash
+sudo make upload PORT=/dev/ttyACM0
 ```
 
 [Back to README](../README.md)
