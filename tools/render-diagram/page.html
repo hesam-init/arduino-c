@@ -1,0 +1,228 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #fff;
+        overflow: hidden;
+      }
+      #stage {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+      #stage > * {
+        position: absolute;
+      }
+      #wires {
+        position: absolute;
+        left: 0;
+        top: 0;
+        overflow: visible;
+        pointer-events: none;
+      }
+    </style>
+    <script src="./node_modules/@wokwi/elements/dist/wokwi-elements.bundle.js"></script>
+  </head>
+  <body>
+    <div id="stage"><svg id="wires" width="1" height="1"></svg></div>
+    <script>
+      // Parts are positioned in diagram coordinates, which may be negative.
+      // Everything is drawn at this offset first, then shifted to fit the page.
+      const ORIGIN = 2000;
+      const PAD = 24;
+
+      // Wire color names used by the Wokwi editor
+      const WIRE_COLORS = {
+        black: "#222",
+        red: "#e22",
+        green: "#2a2",
+        blue: "#26e",
+        yellow: "#ec0",
+        orange: "#f80",
+        purple: "#a2e",
+        violet: "#a2e",
+        white: "#eee",
+        gray: "#888",
+        grey: "#888",
+        brown: "#842",
+        cyan: "#0cc",
+        magenta: "#e0e",
+        gold: "#cb2",
+        limegreen: "#3c3",
+      };
+
+      // Parts that look better "powered on" in a picture
+      const LIT = {
+        "wokwi-led": (el) => {
+          el.value = true;
+        },
+        "wokwi-arduino-uno": (el) => {
+          el.ledPower = true;
+        },
+        "wokwi-arduino-mega": (el) => {
+          el.ledPower = true;
+        },
+        "wokwi-arduino-nano": (el) => {
+          el.ledPower = true;
+        },
+      };
+
+      function rotatePoint(x, y, cx, cy, deg) {
+        const r = (deg * Math.PI) / 180;
+        const dx = x - cx,
+          dy = y - cy;
+        return [
+          cx + dx * Math.cos(r) - dy * Math.sin(r),
+          cy + dx * Math.sin(r) + dy * Math.cos(r),
+        ];
+      }
+
+      // Wokwi route mini-language: "vN"/"hN" move relative to the previous point.
+      // Moves before "*" start at the source pin, moves after it lead into the target pin.
+      function routePoints(from, to, route) {
+        const star = route.indexOf("*");
+        const head = star < 0 ? route : route.slice(0, star);
+        const tail = star < 0 ? [] : route.slice(star + 1);
+
+        const move = ([x, y], step, sign) => {
+          const n = parseFloat(step.slice(1)) * sign;
+          return step[0] === "v" ? [x, y + n] : [x + n, y];
+        };
+
+        const start = [from];
+        for (const step of head) start.push(move(start.at(-1), step, 1));
+        const end = [to];
+        for (const step of [...tail].reverse())
+          end.unshift(move(end[0], step, -1));
+
+        // Join the two halves with an elbow, turning away from the last direction
+        const a = start.at(-1),
+          b = end[0];
+        const joint = [];
+        if (a[0] !== b[0] && a[1] !== b[1]) {
+          const lastVertical = head.length > 0 && head.at(-1)[0] === "v";
+          joint.push(lastVertical ? [b[0], a[1]] : [a[0], b[1]]);
+        }
+        return [...start, ...joint, ...end];
+      }
+
+      function wireColor(name) {
+        return WIRE_COLORS[(name || "green").toLowerCase()] || name;
+      }
+
+      async function render(diagram) {
+        const stage = document.getElementById("stage");
+        const svg = document.getElementById("wires");
+        const parts = {};
+
+        for (const part of diagram.parts) {
+          if (!customElements.get(part.type)) {
+            throw new Error(
+              `unknown part type "${part.type}" (id "${part.id}")`,
+            );
+          }
+          const el = document.createElement(part.type);
+          for (const [k, v] of Object.entries(part.attrs || {}))
+            el.setAttribute(k, v);
+          el.style.left = `${ORIGIN + (part.left || 0)}px`;
+          el.style.top = `${ORIGIN + (part.top || 0)}px`;
+          if (part.rotate) {
+            el.style.transformOrigin = "center";
+            el.style.transform = `rotate(${part.rotate}deg)`;
+          }
+          LIT[part.type]?.(el);
+          stage.insertBefore(el, svg);
+          parts[part.id] = { part, el };
+        }
+        await Promise.all(
+          Object.values(parts).map(({ el }) => el.updateComplete),
+        );
+        await new Promise(requestAnimationFrame);
+
+        const pinPos = (ref) => {
+          const [id, name] = ref.split(":");
+          const p = parts[id];
+          if (!p) throw new Error(`connection uses unknown part "${id}"`);
+          const pin = p.el.pinInfo.find((i) => i.name === name);
+          if (!pin) {
+            const names = p.el.pinInfo.map((i) => i.name).join(", ");
+            throw new Error(
+              `part "${id}" has no pin "${name}" (pins: ${names})`,
+            );
+          }
+          const x0 = ORIGIN + (p.part.left || 0),
+            y0 = ORIGIN + (p.part.top || 0);
+          const w = p.el.offsetWidth,
+            h = p.el.offsetHeight;
+          return rotatePoint(
+            x0 + pin.x,
+            y0 + pin.y,
+            x0 + w / 2,
+            y0 + h / 2,
+            p.part.rotate || 0,
+          );
+        };
+
+        const NS = "http://www.w3.org/2000/svg";
+        const allPoints = [];
+        for (const [from, to, color, route = []] of diagram.connections || []) {
+          const pts = routePoints(pinPos(from), pinPos(to), route);
+          allPoints.push(...pts);
+          const d = pts.map(([x, y]) => `${x},${y}`).join(" ");
+          for (const [stroke, width] of [
+            ["rgba(0,0,0,0.35)", 5],
+            [wireColor(color), 3],
+          ]) {
+            const line = document.createElementNS(NS, "polyline");
+            line.setAttribute("points", d);
+            line.setAttribute("fill", "none");
+            line.setAttribute("stroke", stroke);
+            line.setAttribute("stroke-width", width);
+            line.setAttribute("stroke-linejoin", "round");
+            line.setAttribute("stroke-linecap", "round");
+            svg.appendChild(line);
+          }
+          for (const [x, y] of [pts[0], pts.at(-1)]) {
+            const dot = document.createElementNS(NS, "circle");
+            dot.setAttribute("cx", x);
+            dot.setAttribute("cy", y);
+            dot.setAttribute("r", 2.5);
+            dot.setAttribute("fill", wireColor(color));
+            dot.setAttribute("stroke", "rgba(0,0,0,0.5)");
+            dot.setAttribute("stroke-width", 1);
+            svg.appendChild(dot);
+          }
+        }
+
+        // Fit the page around all parts and wires
+        let minX = Infinity,
+          minY = Infinity,
+          maxX = -Infinity,
+          maxY = -Infinity;
+        const grow = (x, y) => {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        };
+        for (const { el } of Object.values(parts)) {
+          const r = el.getBoundingClientRect();
+          grow(r.left, r.top);
+          grow(r.right, r.bottom);
+        }
+        for (const [x, y] of allPoints) grow(x, y);
+
+        stage.style.left = `${PAD - minX}px`;
+        stage.style.top = `${PAD - minY}px`;
+        return {
+          width: Math.ceil(maxX - minX + 2 * PAD),
+          height: Math.ceil(maxY - minY + 2 * PAD),
+        };
+      }
+    </script>
+  </body>
+</html>

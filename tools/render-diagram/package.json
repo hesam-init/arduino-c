@@ -1,0 +1,11 @@
+{
+  "name": "render-diagram",
+  "private": true,
+  "description": "Render a Wokwi diagram.json to a PNG wiring picture",
+  "type": "module",
+  "bin": "render.mjs",
+  "dependencies": {
+    "@wokwi/elements": "1.9.2",
+    "playwright-core": "1.63.0"
+  }
+}

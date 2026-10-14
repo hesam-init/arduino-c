@@ -2,9 +2,19 @@
 
 This is the source code of my blog article: https://www.tderflinger.com/en/arduino-blinking-led-pure-c
 
-![Arduino Uno Blink LED](./BlinkLed.png)
+![Arduino Uno Blink LED](./projects/blink-led/wiring.png)
 
-This is an Arduino sketch implemented as pure C.
+Arduino Uno programs written in pure C (avr-gcc + avrdude, no Arduino IDE).
+
+## Projects
+
+Each project lives in its own folder under `projects/` with its source, a
+[Wokwi](https://wokwi.com) `diagram.json` describing the wiring, and a `wiring.png`
+generated from it.
+
+| Project | Description |
+| --- | --- |
+| [blink-led](./projects/blink-led/) | Blink an LED on pin 13 every 2 seconds |
 
 For this to compile and load to the Arduino Uno you need
 the AVR C compiler and Avrdude.
@@ -18,14 +28,61 @@ Install the AVR toolchain for your Linux distribution:
 
 ## Compiling
 
-To compile the led program, run make. All build output (`.o`, `.elf`, `.hex`)
-goes into the `build/` directory:
+Pick the project with `PROJECT` (default: `blink-led`). All build output
+(`.o`, `.elf`, `.hex`) goes into `build/<project>/`:
 
 ```bash
-make        # build build/led.hex and print the size report
-make size   # print the size report again
-make clean  # remove the build/ directory
+make                     # build build/blink-led/main.hex and print the size report
+make PROJECT=blink-led   # same, naming the project explicitly
+make size                # print the size report again
+make clean               # remove the build/ directory
 ```
+
+## Wiring diagrams
+
+The wiring of each project is described in `projects/<project>/diagram.json`
+([Wokwi diagram format](https://docs.wokwi.com/diagram-format)) and rendered to
+`wiring.png` with [@wokwi/elements](https://github.com/wokwi/wokwi-elements) in headless Chrome.
+This needs Node.js and Google Chrome (set `CHROME=/path/to/chrome` to use another one).
+The first run installs the renderer's npm packages.
+
+```bash
+make diagram                 # render projects/blink-led/wiring.png
+make diagram PROJECT=...     # render another project
+make diagrams                # render every project
+```
+
+A diagram lists the parts and the wires between their pins:
+
+```json
+{
+  "parts": [
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": 0, "left": 0 },
+    { "type": "wokwi-led", "id": "led1", "top": -80, "left": 100, "attrs": { "color": "red" } }
+  ],
+  "connections": [
+    [ "led1:A", "uno:13", "green", [] ],
+    [ "led1:C", "uno:GND.1", "black", [] ]
+  ]
+}
+```
+
+- `top`/`left` are in pixels; parts can also have `"rotate": 90`.
+- A wire's route uses `vN`/`hN` to move N px vertically/horizontally. Moves before `"*"`
+  start at the first pin, moves after it lead into the second pin.
+- Any part from [@wokwi/elements](https://elements.wokwi.com) works (LEDs, resistors, buttons,
+  displays, sensors, ...). The renderer prints the valid pin names if you get one wrong.
+  Breadboards are not part of that library, so the renderer can't draw them yet.
+
+The easiest way to place parts is to edit the diagram on [wokwi.com](https://wokwi.com)
+(new Arduino Uno project → `diagram.json` tab), then copy it back.
+
+## Simulating
+
+The same `diagram.json` runs your compiled `.hex` in the Wokwi simulator: build the
+project, then open `projects/<project>/` in VS Code with the
+[Wokwi extension](https://docs.wokwi.com/vscode/getting-started) (it reads `wokwi.toml`)
+and run **Wokwi: Start Simulator**.
 
 ## Deploying to Arduino Uno
 

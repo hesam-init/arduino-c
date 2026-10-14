@@ -1,0 +1,6 @@
+# Wokwi simulator config (VS Code extension / wokwi-cli). Build first with:
+#   make PROJECT=blink-led
+[wokwi]
+version = 1
+firmware = '../../build/blink-led/main.hex'
+elf = '../../build/blink-led/main.elf'
